@@ -6,7 +6,7 @@ A small SMTP Proxy Server written in Python
 
 *smtpproxy* is a Python script that implements a small SMTP proxy server. It can be used, for example, when the real remote SMTP server requires applications to implement the pop-before-pp authentication scheme and the application doesn't have support for this scheme. An example for this are php-based applications such as the phpBB forum.
 
-The proxy can also be extended by handlers to further process emails send by devices, for example for extracting voice messages received and forwarded by a local PBX. See the [Mail Handler](#mail-handler) section below.
+The proxy can also be extended by handlers to further process emails send by devices, for example for extracting voice messages received and forwarded by a local PBX. See the [Mail Handler](#mailhandler) section below.
 
 
 The core of the *smtpproxy* is based on the *smtps.py* script by Les Smithon (original located at [http://www.hare.demon.co.uk/pysmtp.html](http://www.hare.demon.co.uk/pysmtp.html) but the link seems to be dead). Some small modifications to the original implementation were made to make the connection handling multi-threaded. This modified version of the the smtp-script is included in the zip-file.
@@ -72,7 +72,7 @@ The individual sections are explained in the following sections.
 - **count=&lt;integer>** : Number of log files to keep. Optional. The default is *10*.  
 - **level=&lt;string>** : One of *INFO*, *WARNING*, *ERROR* or *NONE*. In case of *NONE*, only critical errors are logged. Optional. The default is *INFO*.
 
-### Sender's Mail Account Configuration \[sender@example.com]
+### Sender's Mail Account Configuration
 
 This section must be configured for each sender's mail account, so it may appear more than once in the configuration file.
 
@@ -147,7 +147,7 @@ POP3 communication can be secured by using SSL for POP3 (port 995). This is the 
 
 SMTP communication can be secured by using TLS for SMTP (on the same port). This is the default.
 
-<a href="mail-handler"></a>
+<a href="mailhandler"></a>
 ## Mail Handler Extensions
 
 Before forwarding a received mail, the *smtpproxy* can call handler to process the mail. This feature can be used, for example, to extract and store voice messages that are forwarded by email from the answering machine of a home router.
