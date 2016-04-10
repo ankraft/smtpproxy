@@ -15,8 +15,8 @@ The server stores received mails temporarily in a sub-directory *msgs*. A separa
 
 ## Installation
 
-
 #### Prerequisites
+- Python 2.6
 
 #### Installation & Configuration
 - Clone the repository or download the files to a directory.
