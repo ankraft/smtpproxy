@@ -25,6 +25,7 @@ popssl=true
 popusername=username
 poppassword=password
 popcheckdelay=60
+returnpath=me@example.com
 
 [bar@localdomain.com>]
 use=foo@localdomain.com

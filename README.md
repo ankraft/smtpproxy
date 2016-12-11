@@ -2,7 +2,7 @@
 
 A small SMTP Proxy Server written in Python
 
-**Version**: 1.3
+**Version**: 1.4
 
 *smtpproxy* is a Python script that implements a small SMTP proxy server. It can be used, for example, when the real remote SMTP server requires applications to implement the pop-before-pp authentication scheme and the application doesn't have support for this scheme. An example for this are php-based applications such as the phpBB forum.
 
@@ -92,6 +92,7 @@ Please note, that *smtpproxy* can connect to one or more remote SMTP servers. Fo
 	popusername=username
 	poppassword=password
 	popcheckdelay=60
+	returnpath=me@example.com
 
 **General Settings**
 
@@ -116,6 +117,9 @@ Please note, that *smtpproxy* can connect to one or more remote SMTP servers. Fo
 - **poppassword=&lt;string>** : The password for the POP3 account. Mandatory only if *popbeforesmtp* is set to *true*.  
 **PLEASE NOTE**: The password is stored in plain text! See also the discussion regarding [Security](#security).
 - **popcheckdelay=&lt;integer>** : The time to wait before to re-authenticate again with the POP3 server, in seconds. Optional. The default is *60*.
+
+**Mail Header Fields**
+- **returnpath=&ltstring>** : Specifies a bounce email address for a message. Optional.
 
 **Refer to Another Configuration**
 Instead of creating a new Sender's Mail Configuration for every account, one can setup an account by just referring to another configuration by using the ``use=`` configuration entry. This must be the only setting for this account.
@@ -156,7 +160,7 @@ During startup *smtpproxy* loads all python modules in the sub-directory *handle
 
 - **MailHandler.isEnabled()** : Indicates whether a handler is enabled. Returns *True* or *False* respectively.
 - **MailHandler.setLogger(logger)** : This method is used to inject the logger instance into the handler. The logger can be used to log results and debug messages from the handler.
-- **MailHandler.handleMessage(message)** : This message is called to handle a message. The message is an email object that conforms to the Python *email* library package. See [https://docs.python.org/2/library/email.html](https://docs.python.org/2/library/email.html) for details.
+- **MailHandler.handleMessage(message, mail, callback)** : This message is called to handle a message. The *message* is an email object that conforms to the Python email library package. *mail* is an internal Mail object with the fields 'Mail.to', 'Mail.frm' and 'Mail.msg'. *callback* is an object with two methods 'setTo(string)' and 'setFrom(string)' to set the respective header fields.  See [https://docs.python.org/2/library/email.html](https://docs.python.org/2/library/email.html) for details.
 
 
 ## License

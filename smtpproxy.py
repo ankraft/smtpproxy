@@ -1,6 +1,6 @@
 #
 # smtpproxy.py
-# Version 1.3
+# Version 1.4
 #
 # Author: Andreas Kraft (akr@mheg.org)
 #
@@ -68,6 +68,8 @@ one section must be configured.
 	smtppassword=<str>   : The password for the SMTP account. This must be provided if the SMTP server needs authentication.
 	localhostname=<str>  : The hostname used by the proxy to identify the host it is running on to the remote SMTP server. Optional.
 
+	returnpath=<str>     : Specifies a bounce email address for a message. Optional.
+
 	use=<str>            : The name of another account configuration. If this is set then the configuration data of that account is taken instead.
 
 
@@ -100,6 +102,7 @@ class MailAccount:
 		* rPBS - Perform pop-before-smtp authentication. The default is false.
 		* rpopcheckdelay -  The time before a new POP-before-SMTP authentication is performed. The default is 60 second.
 		* localhostname - The local hostname the proxy uses to authenticate itself to the remote SMTP server. The default is None.		
+		* returnpath - Specifies a bounce email address for a message. The default is None.
 		* useconfig - The name of another account configuration. If this is set then the configuration data of that account is taken instead.
 	"""
 	
@@ -118,6 +121,7 @@ class MailAccount:
 		self.rPBS				= False
 		self.rpopcheckdelay		= 60	# in sec
 		self.localhostname		= None
+		self.returnpath			= None
 		self.useconfig			= None
 
 
@@ -193,27 +197,38 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			to: received earlier, ie. the remaining header and the body part
 			of the e-mail). 
 			A new received: header is added to the header.
+			An optional return-path: header is added to the header.
 			Finally, the e-mail is stored in the file system.
 		"""
 		
 		import email.Utils
 		global	msgdir, receivedHeader
 
+		self.mail.msg = ( args )
+
 		# call the mail handlers to process this message
 		# TODO: specify the order of the handlers to be called
 		# TODO: handle the returned and possible modified email
 		try:
-			msg = email.message_from_string(args)
+			msg = email.message_from_string(self.mail.msg)
 			for h in mailHandlers:
-				mailHandlers[h].handleMessage(msg)
+				mailHandlers[h].handleMessage(msg, self.mail, self)
 		except:
 			mlog.logerr('Message handler caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 
+		# Get account data
 
-		# Add the From: and To: headers at the start!
-		args = 'Received: (' + receivedHeader + ') ' + email.Utils.formatdate() + '\r\n' + args 
+		account = getMailAccount(self.mail.frm)
+		if account == None:
+			mlog.logerr('No account data found for ' + self.mail.frm)
+			return
+
+
+		# Add headers at the start!
+		self.mail.msg = 'Received: (' + receivedHeader + ') ' + email.Utils.formatdate() + '\n' + self.mail.msg 
 		#self.mail.msg = ("From: %s\r\nTo: %s\r\n%s" % (self.mail.frm, ", ".join(self.mail.to), args))
-		self.mail.msg = ( args )
+		if account.returnpath != None:
+			self.mail.msg = 'Return-Path: ' + account.returnpath + '\n' + self.mail.msg
 
 		# Save message
 		fn = msgdir +  '/' + str(time.clock()) + '.msg' 
@@ -223,6 +238,23 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			mlog.logerr('Saving mail caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 			return
 		mlog.log('Mail scheduled for sending (' + fn + ')') 
+
+
+
+	def setTo(self, newTo):
+		""" Callback for changing the to: field of a message.
+		"""
+		msg = email.message_from_string(self.mail.msg)
+		msg.replace_header('To', newTo)
+		self.mail.to = [ newTo ]
+		self.mail.msg =  str(msg)
+
+
+	def setFrom(self, newFrom):
+		""" Callback for changing the from: field of a message.
+		"""
+		self.mail.frm = newFrom
+		# TODO
 
 
 
@@ -237,22 +269,7 @@ def	sendMail(mail, filename = None):
 	global popchecktime, mailaccounts, waitafterpop, debuglevel
 	
 	# find mail configuration for the sender's mail account
-	account = None
-
-	if mail.frm in mailaccounts.keys():
-		account = mailaccounts[mail.frm]
-		if account.useconfig != None:
-			if account.useconfig in mailaccounts.keys():
-				account = mailaccounts[account.useconfig]
-			else:
-				mlog.logerr('No account data found for referenced configuration ' + account.useconfig + ' (' + filename + ')')
-				return False
-
-	#for k in mailaccounts.keys():
-	#	if k == mail.frm:
-	#		account = mailaccounts[k]
-	#		break
-
+	account = getMailAccount(mail.frm)
 	if account == None:
 		mlog.logerr('No account data found for ' + mail.frm + ' (' + filename + ')')
 		return False
@@ -313,6 +330,21 @@ def encode_plain(user, password):
 	""" Encode a user name and password as base64.
 	"""
 	return b64encode("\0%s\0%s" % (user, password))
+
+
+def getMailAccount(frm):
+	""" Find and return the mail account data for a from: address, or None.
+	"""
+	account = None
+	if frm in mailaccounts.keys():
+		account = mailaccounts[frm]
+		if account.useconfig != None:
+			if account.useconfig in mailaccounts.keys():
+				account = mailaccounts[account.useconfig]
+			else:
+				mlog.logerr('No account data found for referenced configuration ' + account.useconfig + ' (' + filename + ')')
+				return None
+	return account
 
 
 def handleScheduledMails():
@@ -397,6 +429,7 @@ def readConfig():
 			account.rsmtpuser = smtpconfig.get(s, 'smtpusername', account.rsmtpuser)
 			account.rsmtppass = smtpconfig.get(s, 'smtppassword', account.rsmtppass)
 			account.localhostname = smtpconfig.get(s, 'localhostname', account.localhostname)
+			account.returnpath = smtpconfig.get(s, 'returnpath', account.returnpath)
 
 
 			# check config

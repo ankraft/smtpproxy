@@ -1,11 +1,14 @@
 # CHANGELOG
 
+## 1.4
+11Dec2016
+* Added support for Return-Path: mail header field.
+* Added support for changing to: and from: header field in mail handler.
+
 ## 1.3 
-10Apr2016
+02Apr2016
 * Added TLS and POP3 SSL support.
 * Added MailHandler base class
-* Added *use* configuration option
-* Added *deleteonerror* configuration option
 
 ## 1.2
 10Dec2014

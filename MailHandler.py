@@ -30,9 +30,11 @@ class MailHandler(object):
 		pass
 
 	@abstractmethod
-	def handleMessage(self, message):
-		"""This message is called to handle a message. The message is an email 
-		   object that conforms to the Python email library package. 
+	def handleMessage(self, message, mail, callback):
+		"""This message is called to handle a message. The *message* is an email 
+		   object that conforms to the Python email library package. *mail* is an internal Mail object with the
+		   fields 'Mail.to', 'Mail.frm' and 'Mail.msg'. *callback* is an object with two methods 'setTo(string)' and
+		   'setFrom(string)' to set the respective header fields.
 		   See [https://docs.python.org/2/library/email.html](https://docs.python.org/2/library/email.html) for details.
 		"""
 		pass
