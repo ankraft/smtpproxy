@@ -14,8 +14,7 @@ level=INFO
 [foo@localdomain.com]
 localhostname=localdomain.com
 smtphost=smtp.example.com
-smtpport=25
-smtptls=true
+smtpsecurity=tls
 smtpusername=username
 smtppassword=password
 popbeforesmtp=true

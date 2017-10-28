@@ -1,6 +1,6 @@
 #
 # smtpproxy.py
-# Version 1.4
+# Version 1.5
 #
 # Author: Andreas Kraft (akr@mheg.org)
 #
@@ -55,8 +55,8 @@ one section must be configured.
 
 	[<mail address of the sender, eg. foo@bar.com>]		 
 	smtphost=<str>       : The host name of the receiving SMTP server. Mandatory.
-	smtpport=<int>       : The port of the receiving SMTP server. Optional. The default is 25.
-	smtptls=<bool>       : Indicates whether the connection to the SMTP server should be secured by TLS. The default is true.
+	smtpport=<int>       : The port of the receiving SMTP server. Optional. The default is depends on the smtpsecurity type (25 or 465).
+	smtpsecurity=<str>   : Indicates the type of the communication security to the SMTP server. Either "tls", "ssl", or "none" (all lowercase). The default is "none".
 	popbeforesmtp=<bool> : Indicates whether POP-before-SMTP authentication must be performed. Optional. The default is false.
 	pophost=<str>        : The host name of the POP3 server. Mandatory only if popbeforesmtp is set to true.
 	popport=<int>        : The port of the POP3 server. Optional. The default is 995.
@@ -91,7 +91,7 @@ class MailAccount:
 		
 		* rsmtphost - The SMTP server host. The default is None.
 		* rsmtpport - The SMTP server port. The default is 25.
-		* rsmtptls - Use TLS for the SMTP connection. The default is True.
+		* rsmtpsecurity - Use tls, ssl or none security for the connection to the SMTP server. The default is none.
 		* rpophost - The POP server host. The default is None.
 		* rpopport - The POP server port. The default is 995.
 		* rpopssl - Use SSL for the POP3 connection. The default is True.
@@ -109,8 +109,8 @@ class MailAccount:
 	def __init__(self):
 		"""Initialize instance variables.""" 
 		self.rsmtphost			= None
-		self.rsmtpport			= 25
-		self.rsmtptls			= True
+		self.rsmtpport			= 0
+		self.rsmtpsecurity		= 'none'
 		self.rpophost			= None
 		self.rpopport			= 995
 		self.rpopssl			= True
@@ -294,14 +294,20 @@ def	sendMail(mail, filename = None):
 	# Send mail
 	try:
 		mlog.log("Sending mail from: " + mail.frm + " to: " + ",".join(mail.to))
+		mlog.logdebug("Port: " + str(account.rsmtpport))
 	
+		smtpFunc = smtplib.SMTP
+		if account.rsmtpsecurity == 'ssl':
+			smtpFunc = smtplib.SMTP_SSL
+			mlog.log("Using SSL")
+
 		if account.localhostname != None:
-			server = smtplib.SMTP(account.rsmtphost, account.rsmtpport, account.localhostname)
+			server = smtpFunc(account.rsmtphost, account.rsmtpport, account.localhostname)
 		else:
-			server = smtplib.SMTP(account.rsmtphost, account.rsmtpport)
+			server = smtpFunc(account.rsmtphost, account.rsmtpport)
 		server.set_debuglevel(debuglevel)
 		server.ehlo()
-		if account.rsmtptls:
+		if account.rsmtpsecurity == 'tls':
 			mlog.log("Using TLS")
 			server.starttls()
 			server.ehlo()
@@ -418,14 +424,14 @@ def readConfig():
 
 			account.rsmtphost = smtpconfig.get(s, 'smtphost', account.rsmtphost)
 			account.rsmtpport = smtpconfig.getint(s, 'smtpport', account.rsmtpport)
-			account.rsmtptls = smtpconfig.getboolean(s, 'smtptls', account.rsmtptls)
+			account.rsmtpsecurity = smtpconfig.get(s, 'smtpsecurity', account.rsmtpsecurity)
 			account.rpophost = smtpconfig.get(s, 'pophost', account.rpophost)
 			account.rpopport = smtpconfig.getint(s, 'popport', account.rpopport)
 			account.rpopssl = smtpconfig.getboolean(s, 'popssl', account.rpopssl)
 			account.rpopuser = smtpconfig.get(s, 'popusername', account.rpopuser)
 			account.rpoppass = smtpconfig.get(s, 'poppassword', account.rpoppass)
 			account.rPBS = smtpconfig.getboolean(s, 'popbeforesmtp', account.rPBS)
-			account.rpopcheckdelay = smtpconfig.getboolean(s, 'popcheckdelay', account.rpopcheckdelay)
+			account.rpopcheckdelay = smtpconfig.getint(s, 'popcheckdelay', account.rpopcheckdelay)
 			account.rsmtpuser = smtpconfig.get(s, 'smtpusername', account.rsmtpuser)
 			account.rsmtppass = smtpconfig.get(s, 'smtppassword', account.rsmtppass)
 			account.localhostname = smtpconfig.get(s, 'localhostname', account.localhostname)
@@ -446,6 +452,13 @@ def readConfig():
 				if account.rpoppass == None:
 					mlog.logerr('Wrong configuration: poppass is missing')
 					return False
+			if account.rsmtpport == 0:	# Different default port depending on security type
+				if account.rsmtpsecurity == 'none' or account.rsmtpsecurity == 'tls':
+					account.rsmtpport = 25
+				else:	# ssl
+					account.rsmtpport = 465
+			else:
+				account.rsmtpport = 25
 
 			mailaccounts[s] = account
 	
