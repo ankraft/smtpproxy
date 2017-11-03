@@ -75,9 +75,7 @@ one section must be configured.
 
 """ 
 
-#from email.base64mime import encode as encode_base64
-#import logging, os, pickle, sys, threading, time, email, types
-import logging, os, pickle, sys, thread, time, email, types
+import logging, os, pickle, sys, thread, time, email, types, tempfile
 import config, mlogging, smtps
 from base64 import b64encode
 from inspect import getmembers, isfunction, isclass
@@ -231,9 +229,9 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			self.mail.msg = 'Return-Path: ' + account.returnpath + '\n' + self.mail.msg
 
 		# Save message
-		fn = msgdir +  '/' + str(time.clock()) + '.msg' 
 		try:
-			pickle.dump(self.mail,open(fn,'w'))
+			(file, fn) = tempfile.mkstemp(suffix='.msg', dir=msgdir)
+			pickle.dump(self.mail, os.fdopen(file, 'w'))
 		except:
 			mlog.logerr('Saving mail caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 			return

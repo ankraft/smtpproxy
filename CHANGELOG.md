@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.5.1
+
+03Nov2017
+
+* Fixed possible duplicate temporary filename in high-volume scenarios.
+
 ## 1.5 
 
 28Oct2017
