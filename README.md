@@ -2,7 +2,7 @@
 
 A small SMTP Proxy Server written in Python
 
-**Version**: 1.5
+**Version**: 1.5.1
 
 *smtpproxy* is a Python script that implements a small SMTP proxy server. It can be used, for example, when the real remote SMTP server requires applications to implement the pop-before-pp authentication scheme and the application doesn't have support for this scheme. An example for this are php-based applications such as the phpBB forum.
 
