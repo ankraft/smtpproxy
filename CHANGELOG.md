@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.5.2
+
+30Dec2018
+
+* Fixed wrong default assignment in remote SMPT port configuration.
+
 ## 1.5.1
 
 03Nov2017

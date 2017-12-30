@@ -455,8 +455,6 @@ def readConfig():
 					account.rsmtpport = 25
 				else:	# ssl
 					account.rsmtpport = 465
-			else:
-				account.rsmtpport = 25
 
 			mailaccounts[s] = account
 	
