@@ -24,5 +24,5 @@ class FixAddress(MailHandler.MailHandler):
 		if mail.to[0] == self.toToFix:
 			self.logger.log('FixAddress: Changing to: field for ' + mail.to[0] + ' -> ' + self.newTo)
 			callback.setTo(self.newTo)
-		return None
+		return True
 

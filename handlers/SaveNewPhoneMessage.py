@@ -20,7 +20,7 @@ class SaveNewPhoneMessage(MailHandler.MailHandler):
 	def setLogger(self, logger):
 		self.logger = logger
 
-	def handleMessage(self, message):
+	def handleMessage(self, message, mail, callback):
 		subject, _ = decode_header(message['subject'])[0]	# decode utf-8 if necessary
 		self.logger.log('SaveNewPhoneMessage: handling message with subject ' + subject)
 		try:
@@ -33,5 +33,5 @@ class SaveNewPhoneMessage(MailHandler.MailHandler):
 				fp.close()
 		except:
 			self.logger.logerr('Saving file caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
-		return None
+		return True
 

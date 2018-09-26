@@ -37,4 +37,4 @@ class MailHandler(object):
 		   'setFrom(string)' to set the respective header fields.
 		   See [https://docs.python.org/2/library/email.html](https://docs.python.org/2/library/email.html) for details.
 		"""
-		pass
+		return True

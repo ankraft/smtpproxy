@@ -1,8 +1,15 @@
 # CHANGELOG
 
+## 1.6.0
+
+26Sep2018
+
+* Added MailHandler support for discarding emails.
+* Fixed wrong MailHandler example.
+
 ## 1.5.2
 
-30Dec2018
+30Dec2017
 
 * Fixed wrong default assignment in remote SMPT port configuration.
 

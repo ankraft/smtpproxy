@@ -210,7 +210,12 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 		try:
 			msg = email.message_from_string(self.mail.msg)
 			for h in mailHandlers:
-				mailHandlers[h].handleMessage(msg, self.mail, self)
+				# Call all mail handlers. If any of the mail handlers
+				# returns False then the mail is not further processed and 
+				# discarded.
+				if not mailHandlers[h].handleMessage(msg, self.mail, self):
+					mlog.log('MailHandler "' + mailHandlers[h].__class__.__name__ + '" canceled processing. Mail discarded.')
+					return
 		except:
 			mlog.logerr('Message handler caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 

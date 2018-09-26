@@ -166,13 +166,14 @@ SMTP communication can be secured by using TLS for SMTP (on the same port), or S
 <a href="mailhandler"></a>
 ## Mail Handler Extensions
 
-Before forwarding a received mail, the *smtpproxy* can call handler to process the mail. This feature can be used, for example, to extract and store voice messages that are forwarded by email from the answering machine of a home router.
+Before forwarding a received mail, the *smtpproxy* can call handlers to process the mail. This feature can be used, for example, to extract and store voice messages that are forwarded by email from the answering machine of a home router. A handler can also be used to stop further processing / discarding an email.
 
 During startup *smtpproxy* loads all python modules in the sub-directory *handlers*. Each module contains a class that is derived from the abstract class [MailHandler](MailHandler.py) and must implement the following methods:
 
 - **MailHandler.isEnabled()** : Indicates whether a handler is enabled. Returns *True* or *False* respectively.
 - **MailHandler.setLogger(logger)** : This method is used to inject the logger instance into the handler. The logger can be used to log results and debug messages from the handler.
-- **MailHandler.handleMessage(message, mail, callback)** : This message is called to handle a message. The *message* is an email object that conforms to the Python email library package. *mail* is an internal Mail object with the fields 'Mail.to', 'Mail.frm' and 'Mail.msg'. *callback* is an object with two methods 'setTo(string)' and 'setFrom(string)' to set the respective header fields.  See [https://docs.python.org/2/library/email.html](https://docs.python.org/2/library/email.html) for details.
+- **MailHandler.handleMessage(message, mail, callback)** : This message is called to handle a message. The *message* is an email object that conforms to the Python email library package. *mail* is an internal Mail object with the fields 'Mail.to', 'Mail.frm' and 'Mail.msg'. *callback* is an object with two methods 'setTo(string)' and 'setFrom(string)' to set the respective header fields.  See [https://docs.python.org/2/library/email.html](https://docs.python.org/2/library/email.html) for details.  
+This method must return *True* when the email was processed normally. When this methd returns *False*, then no further email processing happens and the currently processed email is discarded (ie. not send).
 
 
 ## License
@@ -183,7 +184,7 @@ The *smtpproxy* is available under the MIT license, with the exception of the *s
 
 The MIT License (MIT)
 
-Copyright (c) 2007 - 2017 Andreas Kraft
+Copyright (c) 2007 - 2018 Andreas Kraft
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
