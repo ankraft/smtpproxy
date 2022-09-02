@@ -17,7 +17,7 @@ smtps.py - A Python SMTP Server. Listens on a socket for RFC821
 messages. As each message is processed, methods on the class
 SMTPServerInterface are called. Applications should sub-class this and
 specialize the methods to suit. The default implementation does
-nothing. 
+nothing.
 
 The usage pattern is to subclass SMTPServerInterface, overriding
 methods as appropriate to the application. An instance of this
@@ -31,10 +31,15 @@ called when the complete RFC821 data messages has been received. The
 application can then do what it likes with the message.
 
 A couple of helper functions are defined that manipulate from & to
-addresses. 
+addresses.
 """
 
-import sys, socket, string, thread
+import sys, socket, string
+
+if sys.version_info[0] > 2:
+    from _thread import *
+else:
+    from thread import *
 
 #
 # Your applications should specialize this.
@@ -58,10 +63,10 @@ class SMTPServerInterface:
 
 	def helo(self, args):
 		return None
-	
+
 	def mailFrom(self, args):
 		return None
-		
+
 	def rcptTo(self, args):
 		return None
 
@@ -73,7 +78,7 @@ class SMTPServerInterface:
 
 	def reset(self, args):
 		return None
-	
+
 #
 # Some helper functions for manipulating from & to addresses etc.
 #
@@ -109,10 +114,10 @@ class SMTPServerInterfaceDebug(SMTPServerInterface):
 
 	def helo(self, args):
 		print('Received "helo"', args)
-	
+
 	def mailFrom(self, args):
 		print('Received "MAIL FROM:"', args)
-		
+
 	def rcptTo(self, args):
 		print('Received "RCPT TO"', args)
 
@@ -124,7 +129,7 @@ class SMTPServerInterfaceDebug(SMTPServerInterface):
 
 	def reset(self, args):
 		print('Received "RSET"', args)
-	
+
 
 #
 # This drives the state for a single RFC821 message.
@@ -134,7 +139,7 @@ class SMTPServerEngine:
 	Server engine that calls methods on the SMTPServerInterface object
 	passed at construction time. It is constructed with a bound socket
 	connection to a client. The 'chug' method drives the state,
-	returning when the client RFC821 transaction is complete. 
+	returning when the client RFC821 transaction is complete.
 	"""
 
 	ST_INIT = 0
@@ -145,13 +150,13 @@ class SMTPServerEngine:
 	ST_QUIT = 5
 	ST_AUTH = 10
 	ST_PASS = 11
-	
+
 	def __init__(self, socket, impl, log):
 		self.impl = impl;
 		self.socket = socket;
 		self.state = SMTPServerEngine.ST_INIT
 		self.log = log
-		
+
 	def chug(self):
 		"""
 		Chug the engine, till QUIT is received from the client. As
@@ -159,7 +164,7 @@ class SMTPServerEngine:
 		SMTPServerInterface methods on the object passed at
 		construction time.
 		"""
-		
+
 		self.socket.send("220 Python smtps\r\n")
 		while 1:
 			data = ''
@@ -187,7 +192,7 @@ class SMTPServerEngine:
 					# EOF
 					return
 		return
-			
+
 	def doCommand(self, data):
 		"""Process a single SMTP Command"""
 		cmd = data[0:4]
@@ -271,13 +276,13 @@ class SMTPServerEngine:
 				return "250 OK - Data and terminator. found"
 		else:
 			return None
-	
+
 class SMTPServer:
 	"""
 	A threaded SMTP Server connection manager. Listens for
 	incoming SMTP connections on a given port. For each connection,
 	the SMTPServerEngine is chugged, passing an new instance of
-	SMTPServerInterface. 
+	SMTPServerInterface.
 	"""
 
 	def __init__(self, port, log = None):
@@ -296,24 +301,24 @@ class SMTPServer:
 			nsd = self._socket.accept()
 			engine = SMTPServerEngine(nsd[0], Implclass(), self._log)
 			thread.start_new_thread(self.handleConnection, (engine, ))
-			
+
 	def handleConnection(self, engine):
 		""" Internal function that is called as a new thread to chug the
 			connection."""
 		engine.chug()
-			
-		   
+
+
 
 def Usage():
 	print("""Usage: python smtps.py [port].
 	Where 'port' is SMTP port number, 25 by default. """)
 	sys.exit(1)
-	
+
 
 if __name__ == '__main__':
 	if len(sys.argv) > 2:
 		Usage()
-		
+
 	if len(sys.argv) == 2:
 		if sys.argv[1] in ('-h', '-help', '--help', '?', '-?'):
 			Usage()
