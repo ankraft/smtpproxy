@@ -69,6 +69,7 @@ one section must be configured.
 	localhostname=<str>  : The hostname used by the proxy to identify the host it is running on to the remote SMTP server. Optional.
 
 	returnpath=<str>     : Specifies a bounce email address for a message. Optional.
+	replyto=<str>        : Specifies a reply email address for a message response. Optional.
 
 	use=<str>            : The name of another account configuration. If this is set then the configuration data of that account is taken instead.
 
@@ -101,6 +102,7 @@ class MailAccount:
 		* rpopcheckdelay -  The time before a new POP-before-SMTP authentication is performed. The default is 60 second.
 		* localhostname - The local hostname the proxy uses to authenticate itself to the remote SMTP server. The default is None.		
 		* returnpath - Specifies a bounce email address for a message. The default is None.
+		* replyto - Specifies a reply email address for a message response. The default is None.
 		* useconfig - The name of another account configuration. If this is set then the configuration data of that account is taken instead.
 	"""
 	
@@ -120,6 +122,7 @@ class MailAccount:
 		self.rpopcheckdelay		= 60	# in sec
 		self.localhostname		= None
 		self.returnpath			= None
+		self.replyto			= None
 		self.useconfig			= None
 
 
@@ -196,6 +199,7 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			of the e-mail). 
 			A new received: header is added to the header.
 			An optional return-path: header is added to the header.
+			An optional reply-to: header is added to the header.
 			Finally, the e-mail is stored in the file system.
 		"""
 		
@@ -232,6 +236,8 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 		#self.mail.msg = ("From: %s\r\nTo: %s\r\n%s" % (self.mail.frm, ", ".join(self.mail.to), args))
 		if account.returnpath != None:
 			self.mail.msg = 'Return-Path: ' + account.returnpath + '\n' + self.mail.msg
+		if account.replyto != None:
+			self.mail.msg = 'Reply-To: ' + account.replyto + '\n' + self.mail.msg
 
 		# Save message
 		try:
@@ -439,6 +445,7 @@ def readConfig():
 			account.rsmtppass = smtpconfig.get(s, 'smtppassword', account.rsmtppass)
 			account.localhostname = smtpconfig.get(s, 'localhostname', account.localhostname)
 			account.returnpath = smtpconfig.get(s, 'returnpath', account.returnpath)
+			account.replyto = smtpconfig.get(s, 'replyto', account.replyto)
 
 
 			# check config
