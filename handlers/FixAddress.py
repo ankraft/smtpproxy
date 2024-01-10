@@ -15,7 +15,7 @@ class FixAddress(MailHandler.MailHandler):
 	newTo 	= '<other.name@new.address.com>'
 
 	def isEnabled(self):
-		return True
+		return False;
 
 	def setLogger(self, logger):
 		self.logger = logger

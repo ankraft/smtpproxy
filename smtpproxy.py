@@ -26,10 +26,10 @@ purpose of the server, however, is to enable applications that do not support
 the POP-before-SMTP authentication scheme of some SMTP server.
 
 The server stores mails temporarly in a directory. A separate thread is then
-responsible to send the mails to the configurated destination SMTP server, 
+responsible to send the mails to the configurated destination SMTP server,
 optionally performing the POP-before-SMTP authentication.
 
-The proxy server is configured by an ini-style configuration file in the 
+The proxy server is configured by an ini-style configuration file in the
 current working directory of the server. It consists of the following sections:
 
 The basic configuration of the server.
@@ -53,7 +53,7 @@ The configuration for the sender's mail accounts. This section can be appear mor
 than once in the configuration file. Actually, for each sender's mail account
 one section must be configured.
 
-	[<mail address of the sender, eg. foo@bar.com>]		 
+	[<mail address of the sender, eg. foo@bar.com>]
 	smtphost=<str>       : The host name of the receiving SMTP server. Mandatory.
 	smtpport=<int>       : The port of the receiving SMTP server. Optional. The default is depends on the smtpsecurity type (25 or 465).
 	smtpsecurity=<str>   : Indicates the type of the communication security to the SMTP server. Either "tls", "ssl", or "none" (all lowercase). The default is "none".
@@ -69,14 +69,19 @@ one section must be configured.
 	localhostname=<str>  : The hostname used by the proxy to identify the host it is running on to the remote SMTP server. Optional.
 
 	returnpath=<str>     : Specifies a bounce email address for a message. Optional.
+	replyto=<str>        : Specifies a reply email address for a message response. Optional.
 
 	use=<str>            : The name of another account configuration. If this is set then the configuration data of that account is taken instead.
 
 
-""" 
+"""
 
-import logging, os, pickle, sys, thread, time, email, types, tempfile
+import logging, os, pickle, sys, time, email, types, tempfile
 import config, mlogging, smtps
+if sys.version_info[0] > 2:
+    from _thread import *
+else:
+    from thread import *
 from base64 import b64encode
 from inspect import getmembers, isfunction, isclass
 
@@ -86,26 +91,27 @@ class MailAccount:
 	""" This class holds the attributes of a mail account. It acts as a container
 		for the following variables and is usually filled by the data
 		read from the configuration file.
-		
+
 		* rsmtphost - The SMTP server host. The default is None.
 		* rsmtpport - The SMTP server port. The default is 25.
 		* rsmtpsecurity - Use tls, ssl or none security for the connection to the SMTP server. The default is none.
 		* rpophost - The POP server host. The default is None.
 		* rpopport - The POP server port. The default is 995.
 		* rpopssl - Use SSL for the POP3 connection. The default is True.
-		* rpopuser - The POP user name. The default is None. 
-		* rpoppass - The POP password. The default is None. 
-		* rsmtpuser - The SMTP user name. The default is None. 
-		* rsmtppass - The SMTP password. The default is None. 
+		* rpopuser - The POP user name. The default is None.
+		* rpoppass - The POP password. The default is None.
+		* rsmtpuser - The SMTP user name. The default is None.
+		* rsmtppass - The SMTP password. The default is None.
 		* rPBS - Perform pop-before-smtp authentication. The default is false.
 		* rpopcheckdelay -  The time before a new POP-before-SMTP authentication is performed. The default is 60 second.
-		* localhostname - The local hostname the proxy uses to authenticate itself to the remote SMTP server. The default is None.		
+		* localhostname - The local hostname the proxy uses to authenticate itself to the remote SMTP server. The default is None.
 		* returnpath - Specifies a bounce email address for a message. The default is None.
+		* replyto - Specifies a reply email address for a message response. The default is None.
 		* useconfig - The name of another account configuration. If this is set then the configuration data of that account is taken instead.
 	"""
-	
+
 	def __init__(self):
-		"""Initialize instance variables.""" 
+		"""Initialize instance variables."""
 		self.rsmtphost			= None
 		self.rsmtpport			= 0
 		self.rsmtpsecurity		= 'none'
@@ -120,6 +126,7 @@ class MailAccount:
 		self.rpopcheckdelay		= 60	# in sec
 		self.localhostname		= None
 		self.returnpath			= None
+		self.replyto			= None
 		self.useconfig			= None
 
 
@@ -129,9 +136,9 @@ class Mail:
 		attributes of a mail. Istances of this class are written temporarly to
 		the filesystem and scheduled for later sending.
 	"""
-	
+
 	def __init__(self):
-		""" Initialize intstance variables.""" 
+		""" Initialize intstance variables."""
 		self.msg	= None
 		self.to		= []
 		self.frm	= ''
@@ -150,7 +157,7 @@ popchecktime		= 0
 debuglevel			= 0
 deleteonerror		= True
 
-# Mail handler 
+# Mail handler
 mailHandlerDir = os.path.dirname(os.path.abspath(__file__)) + '/handlers'
 mailHandlers = {}
 
@@ -167,9 +174,9 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 		the mail, it is stored in the local file system and scheduled for
 		forwarding.
 	"""
-	
+
 	def __init__(self):
-		"""	Initialize the instance. 
+		"""	Initialize the instance.
 		"""
 		self.mail = Mail()
 
@@ -177,7 +184,7 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 	def mailFrom(self, args):
 		"""	Receive the from: part (sender) of the e-mail.
 		"""
-		
+
 		# Stash who its from for later
 		self.mail.frm = smtps.stripAddress(args)
 
@@ -185,7 +192,7 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 	def rcptTo(self, args):
 		"""	Receive the to; part (receipient) of the e-mail.
 		"""
-		
+
 		# Stashes multiple RCPT TO: addresses
 		self.mail.to.append(args.split(":")[1].strip())
 
@@ -193,12 +200,13 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 	def data(self, args):
 		""" Receive the remeining part of the e-mail (beside of the from: and
 			to: received earlier, ie. the remaining header and the body part
-			of the e-mail). 
+			of the e-mail).
 			A new received: header is added to the header.
 			An optional return-path: header is added to the header.
+			An optional reply-to: header is added to the header.
 			Finally, the e-mail is stored in the file system.
 		"""
-		
+
 		import email.Utils
 		global	msgdir, receivedHeader
 
@@ -211,7 +219,7 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			msg = email.message_from_string(self.mail.msg)
 			for h in mailHandlers:
 				# Call all mail handlers. If any of the mail handlers
-				# returns False then the mail is not further processed and 
+				# returns False then the mail is not further processed and
 				# discarded.
 				if not mailHandlers[h].handleMessage(msg, self.mail, self):
 					mlog.log('MailHandler "' + mailHandlers[h].__class__.__name__ + '" canceled processing. Mail discarded.')
@@ -228,10 +236,12 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 
 
 		# Add headers at the start!
-		self.mail.msg = 'Received: (' + receivedHeader + ') ' + email.Utils.formatdate() + '\n' + self.mail.msg 
+		self.mail.msg = 'Received: (' + receivedHeader + ') ' + email.Utils.formatdate() + '\n' + self.mail.msg
 		#self.mail.msg = ("From: %s\r\nTo: %s\r\n%s" % (self.mail.frm, ", ".join(self.mail.to), args))
 		if account.returnpath != None:
 			self.mail.msg = 'Return-Path: ' + account.returnpath + '\n' + self.mail.msg
+		if account.replyto != None:
+			self.mail.msg = 'Reply-To: ' + account.replyto + '\n' + self.mail.msg
 
 		# Save message
 		try:
@@ -240,7 +250,7 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 		except:
 			mlog.logerr('Saving mail caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 			return
-		mlog.log('Mail scheduled for sending (' + fn + ')') 
+		mlog.log('Mail scheduled for sending (' + fn + ')')
 
 
 
@@ -262,22 +272,22 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 
 
 def	sendMail(mail, filename = None):
-	""" Send an e-mail to a real SMTP server, depending on the sender's 
+	""" Send an e-mail to a real SMTP server, depending on the sender's
 		configuration. First, the configuration is checked, then (if
 		necessary), a POP-before-SMTP authentication is performed before
 		actually sending the mail.
 	"""
-	
+
 	import poplib, smtplib
 	global popchecktime, mailaccounts, waitafterpop, debuglevel
-	
+
 	# find mail configuration for the sender's mail account
 	account = getMailAccount(mail.frm)
 	if account == None:
 		mlog.logerr('No account data found for ' + mail.frm + ' (' + filename + ')')
 		return False
 
-	# First do POP-Before-SMTP, if necessary    	
+	# First do POP-Before-SMTP, if necessary
 	if account.rPBS and (popchecktime + account.rpopcheckdelay) < time.time():
 		try:
 			mlog.log("Performing Pop-before-SMTP")
@@ -286,19 +296,19 @@ def	sendMail(mail, filename = None):
 			M.user(account.rpopuser)
 			M.pass_(account.rpoppass)
 			M.quit()
-			
+
 			popchecktime = time.time()
-			
+
 			time.sleep(waitafterpop)
 		except:
 			mlog.logerr('POP-before-SMTP caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 			return False
-	
+
 	# Send mail
 	try:
 		mlog.log("Sending mail from: " + mail.frm + " to: " + ",".join(mail.to))
 		mlog.logdebug("Port: " + str(account.rsmtpport))
-	
+
 		smtpFunc = smtplib.SMTP
 		if account.rsmtpsecurity == 'ssl':
 			smtpFunc = smtplib.SMTP_SSL
@@ -329,7 +339,7 @@ def	sendMail(mail, filename = None):
 		server.sendmail(mail.frm, mail.to, mail.msg)
 		server.quit()
 	except:
-		# TODO: check Greylist errror 	
+		# TODO: check Greylist errror
 		mlog.logerr('SMTP caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 		return False
 	return True
@@ -361,7 +371,7 @@ def handleScheduledMails():
 		e-mails asynchronously.
 	"""
 	global	sleeptime, msgdir
-	
+
 	while True:
 		ld = os.listdir(msgdir)
 
@@ -397,48 +407,49 @@ def readConfig():
 	""" Read the configuration from the configuration file in the current
 		working directory.
 	"""
-	
+
 	global smtpconfig, mailaccounts, port, msgdir,sleeptime, waitafterpop, debuglevel, deleteonerror
-	
+
 	if os.path.exists(configFile) == False:
 		print('Configuration file "' + configFile +'" doesn''t exist. Exiting.')
 		return False
 	smtpconfig = config.Config()
 	smtpconfig.read([configFile])
-	
-	# Read basic configuration
-	port = smtpconfig.getint('config', 'port', port)							# port of the smtp proxy
-	msgdir = smtpconfig.getint('config', 'msgdir', "./msgs")					# directory where to store temporary messages
-	sleeptime = smtpconfig.getint('config', 'sleeptime', sleeptime)				# sleep time for sending thread
-	waitafterpop = smtpconfig.getint('config', 'waitafterpop', waitafterpop)	# time to wait after pop authentication
-	debuglevel = smtpconfig.getint('config', 'debuglevel', debuglevel)			# debuglevel for various functions
-	deleteonerror = smtpconfig.getboolean('config', 'deleteonerror', deleteonerror)	# delete mail on error
 
-	
+	# Read basic configuration
+	port = smtpconfig.getint('config', 'port', default=port)							# port of the smtp proxy
+	msgdir = smtpconfig.get('config', 'msgdir', default="./msgs")					# directory where to store temporary messages
+	sleeptime = smtpconfig.getint('config', 'sleeptime', default=sleeptime)				# sleep time for sending thread
+	waitafterpop = smtpconfig.getint('config', 'waitafterpop', default=waitafterpop)	# time to wait after pop authentication
+	debuglevel = smtpconfig.getint('config', 'debuglevel', default=debuglevel)			# debuglevel for various functions
+	deleteonerror = smtpconfig.getboolean('config', 'deleteonerror', default=deleteonerror)	# delete mail on error
+
+
 	# Read accounts
 	for s in smtpconfig.sections():
 		if s not in [ 'logging', 'config' ]:
 			account = MailAccount()
 
-			account.useconfig = smtpconfig.get(s, 'use', account.useconfig)
+			account.useconfig = smtpconfig.get(s, 'use', default=account.useconfig)
 			if account.useconfig != None:
 				mailaccounts[s] = account
 				continue
 
-			account.rsmtphost = smtpconfig.get(s, 'smtphost', account.rsmtphost)
-			account.rsmtpport = smtpconfig.getint(s, 'smtpport', account.rsmtpport)
-			account.rsmtpsecurity = smtpconfig.get(s, 'smtpsecurity', account.rsmtpsecurity)
-			account.rpophost = smtpconfig.get(s, 'pophost', account.rpophost)
-			account.rpopport = smtpconfig.getint(s, 'popport', account.rpopport)
-			account.rpopssl = smtpconfig.getboolean(s, 'popssl', account.rpopssl)
-			account.rpopuser = smtpconfig.get(s, 'popusername', account.rpopuser)
-			account.rpoppass = smtpconfig.get(s, 'poppassword', account.rpoppass)
-			account.rPBS = smtpconfig.getboolean(s, 'popbeforesmtp', account.rPBS)
-			account.rpopcheckdelay = smtpconfig.getint(s, 'popcheckdelay', account.rpopcheckdelay)
-			account.rsmtpuser = smtpconfig.get(s, 'smtpusername', account.rsmtpuser)
-			account.rsmtppass = smtpconfig.get(s, 'smtppassword', account.rsmtppass)
-			account.localhostname = smtpconfig.get(s, 'localhostname', account.localhostname)
-			account.returnpath = smtpconfig.get(s, 'returnpath', account.returnpath)
+			account.rsmtphost = smtpconfig.get(s, 'smtphost', default=account.rsmtphost)
+			account.rsmtpport = smtpconfig.getint(s, 'smtpport', default=account.rsmtpport)
+			account.rsmtpsecurity = smtpconfig.get(s, 'smtpsecurity', default=account.rsmtpsecurity)
+			account.rpophost = smtpconfig.get(s, 'pophost', default=account.rpophost)
+			account.rpopport = smtpconfig.getint(s, 'popport', default=account.rpopport)
+			account.rpopssl = smtpconfig.getboolean(s, 'popssl', default=account.rpopssl)
+			account.rpopuser = smtpconfig.get(s, 'popusername', default=account.rpopuser)
+			account.rpoppass = smtpconfig.get(s, 'poppassword', default=account.rpoppass)
+			account.rPBS = smtpconfig.getboolean(s, 'popbeforesmtp', default=account.rPBS)
+			account.rpopcheckdelay = smtpconfig.getint(s, 'popcheckdelay', default=account.rpopcheckdelay)
+			account.rsmtpuser = smtpconfig.get(s, 'smtpusername', default=account.rsmtpuser)
+			account.rsmtppass = smtpconfig.get(s, 'smtppassword', default=account.rsmtppass)
+			account.localhostname = smtpconfig.get(s, 'localhostname', default=account.localhostname)
+			account.returnpath = smtpconfig.get(s, 'returnpath', default=account.returnpath)
+			account.replyto = smtpconfig.get(s, 'replyto', default=account.replyto)
 
 
 			# check config
@@ -462,7 +473,7 @@ def readConfig():
 					account.rsmtpport = 465
 
 			mailaccounts[s] = account
-	
+
 	# make temporary directory
 	try:
 		if os.path.exists(msgdir) == False:
@@ -470,7 +481,7 @@ def readConfig():
 	except:
 		print('Can''t create message directory ' + msgdir)
 		return False
-	
+
 	return True
 
 
@@ -478,11 +489,11 @@ def initLogging():
 	"""Init the logging system.
 	"""
 	global smtpconfig, logFile, logSize, logCount, logLevel
-	
-	logFile = smtpconfig.get('logging', 'file', logFile)
-	logSize = smtpconfig.get('logging', 'size', logSize)
-	logCount = smtpconfig.get('logging', 'count', logCount)
-	str = smtpconfig.get('logging', 'level', 'INFO')
+
+	logFile = smtpconfig.get('logging', 'file', default=logFile)
+	logSize = smtpconfig.getint('logging', 'size', default=logSize)
+	logCount = smtpconfig.getint('logging', 'count', default=logCount)
+	str = smtpconfig.get('logging', 'level', default='INFO')
 	if str == 'NONE':
 		logLevel = logging.CRITICAL
 	if str == 'INFO':
@@ -525,7 +536,7 @@ if __name__ == '__main__':
 
 	mlog.log('Starting SMTP Proxy on port ' + str(port))
 	try:
-		thread.start_new_thread(handleScheduledMails, ())
+		start_new_thread(handleScheduledMails, ())
 		s = smtps.SMTPServer(port, mlog)
 		s.serve(SMTPProxyService)
 	except:

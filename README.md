@@ -102,6 +102,7 @@ popusername=username
 poppassword=password
 popcheckdelay=60
 returnpath=me@example.com
+replyto=me@example.com
 ```
 
 **General Settings**
@@ -131,6 +132,7 @@ returnpath=me@example.com
 **Mail Header Fields**
 
 - **returnpath=&lt;string>** : Specifies a bounce email address for a message. Optional.
+- **replyto=&lt;string>** : Specifies a reply email address for a message response. Optional.
 
 **Refer to Another Configuration**
 
