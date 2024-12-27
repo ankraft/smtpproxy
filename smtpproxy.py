@@ -242,6 +242,8 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			self.mail.msg = 'Return-Path: ' + account.returnpath + '\n' + self.mail.msg
 		if account.replyto != None:
 			self.mail.msg = 'Reply-To: ' + account.replyto + '\n' + self.mail.msg
+		if account.forcefrom != None:
+			self.mail.msg = 'From: ' + account.forcefrom + '\n' + self.mail.msg
 		print(self.mail.msg)
 		# Save message
 		try:
