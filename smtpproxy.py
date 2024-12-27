@@ -254,7 +254,6 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 					newmsg += line + '\n'
 			self.mail.msg = newmsg
 			self.mail.msg = 'From: ' + account.forcefrom + '\n' + self.mail.msg
-		print(self.mail.msg)
 		# Save message
 		try:
 			(file, fn) = tempfile.mkstemp(suffix='.msg', dir=msgdir)
