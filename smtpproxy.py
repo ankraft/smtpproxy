@@ -233,7 +233,10 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 
 		account = getMailAccount(self.mail.frm)
 		if account == None:
-			mlog.logerr('No account data found for ' + self.mail.frm)
+			mlog.logerr('No account data found for ' + self.mail.frm + ', switching to default account')
+			account = getMailAccount('default')
+			if account == None:
+				mlog.logerr('No default account data found')
 			return
 
 
@@ -293,8 +296,11 @@ def	sendMail(mail, filename = None):
 	# find mail configuration for the sender's mail account
 	account = getMailAccount(mail.frm)
 	if account == None:
-		mlog.logerr('No account data found for ' + mail.frm + ' (' + filename + ')')
-		return False
+		mlog.logerr('No account data found for ' + mail.frm + ' (' + filename + ')' + ', switching to default account')
+		account = getMailAccount('default')
+		if account == None:
+			mlog.logerr('No default account data found (' + filename + ')')
+			return False
 
 	# First do POP-Before-SMTP, if necessary
 	if account.rPBS and (popchecktime + account.rpopcheckdelay) < time.time():
