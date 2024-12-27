@@ -453,6 +453,7 @@ def readConfig():
 			account.localhostname = smtpconfig.get(s, 'localhostname', default=account.localhostname)
 			account.returnpath = smtpconfig.get(s, 'returnpath', default=account.returnpath)
 			account.replyto = smtpconfig.get(s, 'replyto', default=account.replyto)
+			account.forcefrom = smtpconfig.get(s, 'forcefrom', default=account.forcefrom)
 
 
 			# check config
