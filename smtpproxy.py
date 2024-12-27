@@ -315,6 +315,8 @@ def	sendMail(mail, filename = None):
 
 	# Send mail
 	try:
+		if account.forcefrom != None:
+			mail.frm = account.forcefrom
 		mlog.log("Sending mail from: " + mail.frm + " to: " + ",".join(mail.to))
 		mlog.logdebug("Port: " + str(account.rsmtpport))
 		
