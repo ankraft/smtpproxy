@@ -76,7 +76,8 @@ one section must be configured.
 
 """
 
-import logging, os, pickle, sys, time, email, types, tempfile
+from hmac import new
+import logging, os, pickle, sys, time, email, types, tempfile, ssl
 import config, mlogging, smtps
 if sys.version_info[0] > 2:
     from _thread import *
@@ -244,6 +245,11 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 		if account.replyto != None:
 			self.mail.msg = 'Reply-To: ' + account.replyto + '\n' + self.mail.msg
 		if account.forcefrom != None:
+			newmsg = ''
+			for line in self.mail.msg.split('\n'):
+				if not line.startswith('From:'):
+					newmsg += line + '\n'
+			self.mail.msg = newmsg
 			self.mail.msg = 'From: ' + account.forcefrom + '\n' + self.mail.msg
 		print(self.mail.msg)
 		# Save message
@@ -311,7 +317,7 @@ def	sendMail(mail, filename = None):
 	try:
 		mlog.log("Sending mail from: " + mail.frm + " to: " + ",".join(mail.to))
 		mlog.logdebug("Port: " + str(account.rsmtpport))
-
+		
 		smtpFunc = smtplib.SMTP
 		if account.rsmtpsecurity == 'ssl':
 			smtpFunc = smtplib.SMTP_SSL
@@ -325,7 +331,9 @@ def	sendMail(mail, filename = None):
 		server.ehlo()
 		if account.rsmtpsecurity == 'tls':
 			mlog.log("Using TLS")
-			server.starttls()
+			context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+			context.set_ciphers('DEFAULT@SECLEVEL=1')
+			server.starttls(context=context)
 			server.ehlo()
 		if account.rsmtpuser != None:
 			try:
