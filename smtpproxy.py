@@ -127,6 +127,7 @@ class MailAccount:
 		self.localhostname		= None
 		self.returnpath			= None
 		self.replyto			= None
+		self.forcefrom			= None
 		self.useconfig			= None
 
 
