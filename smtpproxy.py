@@ -207,7 +207,7 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			Finally, the e-mail is stored in the file system.
 		"""
 
-		import email.Utils
+		import email.utils
 		global	msgdir, receivedHeader
 
 		self.mail.msg = ( args )
@@ -236,17 +236,17 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 
 
 		# Add headers at the start!
-		self.mail.msg = 'Received: (' + receivedHeader + ') ' + email.Utils.formatdate() + '\n' + self.mail.msg
+		self.mail.msg = 'Received: (' + receivedHeader + ') ' + email.utils.formatdate() + '\n' + self.mail.msg
 		#self.mail.msg = ("From: %s\r\nTo: %s\r\n%s" % (self.mail.frm, ", ".join(self.mail.to), args))
 		if account.returnpath != None:
 			self.mail.msg = 'Return-Path: ' + account.returnpath + '\n' + self.mail.msg
 		if account.replyto != None:
 			self.mail.msg = 'Reply-To: ' + account.replyto + '\n' + self.mail.msg
-
+		print(self.mail.msg)
 		# Save message
 		try:
 			(file, fn) = tempfile.mkstemp(suffix='.msg', dir=msgdir)
-			pickle.dump(self.mail, os.fdopen(file, 'w'))
+			pickle.dump(self.mail, os.fdopen(file, 'wb'))
 		except:
 			mlog.logerr('Saving mail caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 			return
@@ -380,7 +380,7 @@ def handleScheduledMails():
 			try:
 				fn = msgdir +  '/' + e
 				try:
-					mail = pickle.load(open(fn,'r'))
+					mail = pickle.load(open(fn,'rb'))
 					if sendMail(mail, fn) == False:
 						ok = False
 						continue
