@@ -237,7 +237,7 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			account = getMailAccount('default')
 			if account == None:
 				mlog.logerr('No default account data found')
-			return
+				return
 
 
 		# Add headers at the start!
