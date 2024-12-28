@@ -57,6 +57,7 @@ one section must be configured.
 	smtphost=<str>       : The host name of the receiving SMTP server. Mandatory.
 	smtpport=<int>       : The port of the receiving SMTP server. Optional. The default is depends on the smtpsecurity type (25 or 465).
 	smtpsecurity=<str>   : Indicates the type of the communication security to the SMTP server. Either "tls", "ssl", or "none" (all lowercase). The default is "none".
+	smtpweakssl=<str>    : This option is useful in case using outdated SMTP server with weak old implementation of SSL with lower TLS and security levels. It is NOT recommended and it is strongly advised to update SMTP server. Use it only if there is no other options left. Default is 'False'.
 	popbeforesmtp=<bool> : Indicates whether POP-before-SMTP authentication must be performed. Optional. The default is false.
 	pophost=<str>        : The host name of the POP3 server. Mandatory only if popbeforesmtp is set to true.
 	popport=<int>        : The port of the POP3 server. Optional. The default is 995.
@@ -70,6 +71,7 @@ one section must be configured.
 
 	returnpath=<str>     : Specifies a bounce email address for a message. Optional.
 	replyto=<str>        : Specifies a reply email address for a message response. Optional.
+	forcefrom=<str>      : Specifies a from email address for a message. Optional.
 
 	use=<str>            : The name of another account configuration. If this is set then the configuration data of that account is taken instead.
 
@@ -129,6 +131,7 @@ class MailAccount:
 		self.returnpath			= None
 		self.replyto			= None
 		self.forcefrom			= None
+		self.smtpweakssl		= False
 		self.useconfig			= None
 
 
@@ -338,9 +341,12 @@ def	sendMail(mail, filename = None):
 		server.ehlo()
 		if account.rsmtpsecurity == 'tls':
 			mlog.log("Using TLS")
-			context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-			context.set_ciphers('DEFAULT@SECLEVEL=1')
-			server.starttls(context=context)
+			if account.smtpweakssl:				
+				context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+				context.set_ciphers('DEFAULT@SECLEVEL=1')
+				server.starttls(context=context)
+			else:
+				server.starttls()
 			server.ehlo()
 		if account.rsmtpuser != None:
 			try:

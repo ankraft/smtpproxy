@@ -92,6 +92,7 @@ Please note, that *smtpproxy* can connect to one or more remote SMTP servers. Fo
 localhostname=localdomain.com
 smtphost=smtp.example.com
 smtpsecurity=ssl
+smtpweakssl=false
 smtpusername=username
 smtppassword=password
 popbeforesmtp=true
@@ -103,6 +104,7 @@ poppassword=password
 popcheckdelay=60
 returnpath=me@example.com
 replyto=me@example.com
+forcefrom=me@example.com
 ```
 
 **General Settings**
@@ -114,6 +116,7 @@ replyto=me@example.com
 - **smtphost=&lt;string>** : The host name of the receiving SMTP server. Mandatory.
 - **smtpport=&lt;integer>** : The port of the receiving SMTP server. Optional. The default is depends on the *smtpsecurity* type (*none* and *tls*: 25, *ssl*: 465).
 - **smtpsecurity=&lt;string>** : Indicates the type of the communication security to the SMTP server. Either "tls", "ssl", or "none" (all lowercase, without ".."). The default is "none".
+- **smtpweakssl=&lt;string>** : This option is useful in case using outdated SMTP server with weak old implementation of SSL with lower TLS and security levels. It is NOT recommended and it is strongly advised to update SMTP server. Use it only if there is no other options left. Default is 'False'.
 - **smtpusername=&lt;string>** : The username for the SMTP account. Optional, but this entry must be provided if the SMTP server needs authentication.
 - **smtppassword=&lt;string>** : The password for the SMTP account. Optional, but this entry must be provided if the SMTP server needs authentication.  
 **PLEASE NOTE**: The password is stored in plain text! See also the discussion regarding [Security](#security).
@@ -133,6 +136,7 @@ replyto=me@example.com
 
 - **returnpath=&lt;string>** : Specifies a bounce email address for a message. Optional.
 - **replyto=&lt;string>** : Specifies a reply email address for a message response. Optional.
+- **forcefrom=&lt;string>** : Forces certain email address for a Form field. Optional.
 
 **Refer to Another Configuration**
 
