@@ -118,6 +118,7 @@ class MailAccount:
 		self.rsmtphost			= None
 		self.rsmtpport			= 0
 		self.rsmtpsecurity		= 'none'
+		self.rsmtpweakssl		= False
 		self.rpophost			= None
 		self.rpopport			= 995
 		self.rpopssl			= True
@@ -131,7 +132,6 @@ class MailAccount:
 		self.returnpath			= None
 		self.replyto			= None
 		self.forcefrom			= None
-		self.smtpweakssl		= False
 		self.useconfig			= None
 
 
