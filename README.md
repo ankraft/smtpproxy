@@ -83,7 +83,7 @@ level=INFO
 
 ### Sender's Mail Account Configuration
 
-This section must be configured for each sender's mail account, so it may appear more than once in the configuration file.
+This section must be configured for each sender's mail account, so it may appear more than once in the configuration file. Sender can be set to *default*, this is considered to be as a "catchall" option for all sender addresses, which do not have own configuration entry. Use with caution.
 
 Please note, that *smtpproxy* can connect to one or more remote SMTP servers. For each remote server a separate mail account section must be configured.
 
