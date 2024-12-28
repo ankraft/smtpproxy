@@ -1,0 +1,12 @@
+[Unit]
+Description=SMTP Proxy Service
+After=multi-user.target
+
+[Service]
+WorkingDirectory=/home/<username>/smtpproxy
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /home/<username>/smtpproxy/smtpproxy.py
+
+[Install]
+WantedBy=multi-user.target
