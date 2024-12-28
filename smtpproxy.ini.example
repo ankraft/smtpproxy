@@ -15,6 +15,7 @@ level=INFO
 localhostname=localdomain.com
 smtphost=smtp.example.com
 smtpsecurity=tls
+smtpweakssl=false
 smtpusername=username
 smtppassword=password
 popbeforesmtp=true
@@ -25,6 +26,8 @@ popusername=username
 poppassword=password
 popcheckdelay=60
 returnpath=me@example.com
+replyto=me@example.com
+forcefrom=me@example.com
 
 [bar@localdomain.com>]
 use=foo@localdomain.com
