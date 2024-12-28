@@ -341,7 +341,7 @@ def	sendMail(mail, filename = None):
 		server.ehlo()
 		if account.rsmtpsecurity == 'tls':
 			mlog.log("Using TLS")
-			if account.smtpweakssl:				
+			if account.rsmtpweakssl:				
 				context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
 				context.set_ciphers('DEFAULT@SECLEVEL=1')
 				server.starttls(context=context)
@@ -462,6 +462,7 @@ def readConfig():
 			account.rsmtphost = smtpconfig.get(s, 'smtphost', default=account.rsmtphost)
 			account.rsmtpport = smtpconfig.getint(s, 'smtpport', default=account.rsmtpport)
 			account.rsmtpsecurity = smtpconfig.get(s, 'smtpsecurity', default=account.rsmtpsecurity)
+			account.rsmtpweakssl = smtpconfig.get(s, 'smtpweakssl', default=account.rsmtpweakssl)
 			account.rpophost = smtpconfig.get(s, 'pophost', default=account.rpophost)
 			account.rpopport = smtpconfig.getint(s, 'popport', default=account.rpopport)
 			account.rpopssl = smtpconfig.getboolean(s, 'popssl', default=account.rpopssl)
