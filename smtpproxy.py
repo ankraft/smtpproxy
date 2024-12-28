@@ -57,7 +57,7 @@ one section must be configured.
 	smtphost=<str>       : The host name of the receiving SMTP server. Mandatory.
 	smtpport=<int>       : The port of the receiving SMTP server. Optional. The default is depends on the smtpsecurity type (25 or 465).
 	smtpsecurity=<str>   : Indicates the type of the communication security to the SMTP server. Either "tls", "ssl", or "none" (all lowercase). The default is "none".
-	smtpweakssl=<str>    : This option is useful in case using outdated SMTP server with weak old implementation of SSL with lower TLS and security levels. It is NOT recommended and it is strongly advised to update SMTP server. Use it only if there is no other options left. Default is 'False'.
+	smtpweaktls=<str>    : This option is useful in case using outdated SMTP server with weak old implementation of SSL with lower TLS and security levels. It is NOT recommended and it is strongly advised to update SMTP server. Use it only if there is no other options left. Default is 'False'.
 	popbeforesmtp=<bool> : Indicates whether POP-before-SMTP authentication must be performed. Optional. The default is false.
 	pophost=<str>        : The host name of the POP3 server. Mandatory only if popbeforesmtp is set to true.
 	popport=<int>        : The port of the POP3 server. Optional. The default is 995.
@@ -118,7 +118,7 @@ class MailAccount:
 		self.rsmtphost			= None
 		self.rsmtpport			= 0
 		self.rsmtpsecurity		= 'none'
-		self.rsmtpweakssl		= False
+		self.rsmtpweaktls		= False
 		self.rpophost			= None
 		self.rpopport			= 995
 		self.rpopssl			= True
@@ -341,7 +341,7 @@ def	sendMail(mail, filename = None):
 		server.ehlo()
 		if account.rsmtpsecurity == 'tls':
 			mlog.log("Using TLS")
-			if account.rsmtpweakssl:				
+			if account.rsmtpweaktls:				
 				context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
 				context.set_ciphers('DEFAULT@SECLEVEL=1')
 				server.starttls(context=context)
@@ -462,7 +462,7 @@ def readConfig():
 			account.rsmtphost = smtpconfig.get(s, 'smtphost', default=account.rsmtphost)
 			account.rsmtpport = smtpconfig.getint(s, 'smtpport', default=account.rsmtpport)
 			account.rsmtpsecurity = smtpconfig.get(s, 'smtpsecurity', default=account.rsmtpsecurity)
-			account.rsmtpweakssl = smtpconfig.get(s, 'smtpweakssl', default=account.rsmtpweakssl)
+			account.rsmtpweaktls = smtpconfig.get(s, 'smtpweaktls', default=account.rsmtpweaktls)
 			account.rpophost = smtpconfig.get(s, 'pophost', default=account.rpophost)
 			account.rpopport = smtpconfig.getint(s, 'popport', default=account.rpopport)
 			account.rpopssl = smtpconfig.getboolean(s, 'popssl', default=account.rpopssl)
@@ -497,7 +497,6 @@ def readConfig():
 					account.rsmtpport = 25
 				else:	# ssl
 					account.rsmtpport = 465
-
 			mailaccounts[s] = account
 
 	# make temporary directory
