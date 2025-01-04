@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 1.7.0
+
+04Jan2024
+
+* Thanks to @nebm51 for the following contributions.
+* Added support for a "default" account configuration that provides fallback account settings.
+* Added a new account configuration setting "from" that adds a missing *from* header in mails.
+* Added an option to support weak SSL configuration for outdated SMTP servers.
+* Improved Python 3 compatibility.
+
+
 ## 1.6.0
 
 26Sep2018
