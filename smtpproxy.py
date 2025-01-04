@@ -57,6 +57,7 @@ one section must be configured.
 	smtphost=<str>       : The host name of the receiving SMTP server. Mandatory.
 	smtpport=<int>       : The port of the receiving SMTP server. Optional. The default is depends on the smtpsecurity type (25 or 465).
 	smtpsecurity=<str>   : Indicates the type of the communication security to the SMTP server. Either "tls", "ssl", or "none" (all lowercase). The default is "none".
+	smtpweaktls=<str>    : This option is useful in case using outdated SMTP server with weak old implementation of SSL with lower TLS and security levels. It is NOT recommended and it is strongly advised to update SMTP server. Use it only if there is no other options left. Default is 'False'.
 	popbeforesmtp=<bool> : Indicates whether POP-before-SMTP authentication must be performed. Optional. The default is false.
 	pophost=<str>        : The host name of the POP3 server. Mandatory only if popbeforesmtp is set to true.
 	popport=<int>        : The port of the POP3 server. Optional. The default is 995.
@@ -70,13 +71,15 @@ one section must be configured.
 
 	returnpath=<str>     : Specifies a bounce email address for a message. Optional.
 	replyto=<str>        : Specifies a reply email address for a message response. Optional.
+	forcefrom=<str>      : Specifies a from email address for a message. Optional.
 
 	use=<str>            : The name of another account configuration. If this is set then the configuration data of that account is taken instead.
 
 
 """
 
-import logging, os, pickle, sys, time, email, types, tempfile
+from hmac import new
+import logging, os, pickle, sys, time, email, types, tempfile, ssl
 import config, mlogging, smtps
 if sys.version_info[0] > 2:
     from _thread import *
@@ -115,6 +118,7 @@ class MailAccount:
 		self.rsmtphost			= None
 		self.rsmtpport			= 0
 		self.rsmtpsecurity		= 'none'
+		self.rsmtpweaktls		= False
 		self.rpophost			= None
 		self.rpopport			= 995
 		self.rpopssl			= True
@@ -127,6 +131,7 @@ class MailAccount:
 		self.localhostname		= None
 		self.returnpath			= None
 		self.replyto			= None
+		self.forcefrom			= None
 		self.useconfig			= None
 
 
@@ -207,7 +212,7 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 			Finally, the e-mail is stored in the file system.
 		"""
 
-		import email.Utils
+		import email.utils
 		global	msgdir, receivedHeader
 
 		self.mail.msg = ( args )
@@ -231,22 +236,31 @@ class SMTPProxyService(smtps.SMTPServerInterface):
 
 		account = getMailAccount(self.mail.frm)
 		if account == None:
-			mlog.logerr('No account data found for ' + self.mail.frm)
-			return
+			mlog.logerr('No account data found for ' + self.mail.frm + ', switching to default account')
+			account = getMailAccount('default')
+			if account == None:
+				mlog.logerr('No default account data found')
+				return
 
 
 		# Add headers at the start!
-		self.mail.msg = 'Received: (' + receivedHeader + ') ' + email.Utils.formatdate() + '\n' + self.mail.msg
+		self.mail.msg = 'Received: (' + receivedHeader + ') ' + email.utils.formatdate() + '\n' + self.mail.msg
 		#self.mail.msg = ("From: %s\r\nTo: %s\r\n%s" % (self.mail.frm, ", ".join(self.mail.to), args))
 		if account.returnpath != None:
 			self.mail.msg = 'Return-Path: ' + account.returnpath + '\n' + self.mail.msg
 		if account.replyto != None:
 			self.mail.msg = 'Reply-To: ' + account.replyto + '\n' + self.mail.msg
-
+		if account.forcefrom != None:
+			newmsg = ''
+			for line in self.mail.msg.split('\n'):
+				if not line.startswith('From:'):
+					newmsg += line + '\n'
+			self.mail.msg = newmsg
+			self.mail.msg = 'From: ' + account.forcefrom + '\n' + self.mail.msg
 		# Save message
 		try:
 			(file, fn) = tempfile.mkstemp(suffix='.msg', dir=msgdir)
-			pickle.dump(self.mail, os.fdopen(file, 'w'))
+			pickle.dump(self.mail, os.fdopen(file, 'wb'))
 		except:
 			mlog.logerr('Saving mail caught exception: ' +  str(sys.exc_info()[0]) +": " + str(sys.exc_info()[1]))
 			return
@@ -284,8 +298,11 @@ def	sendMail(mail, filename = None):
 	# find mail configuration for the sender's mail account
 	account = getMailAccount(mail.frm)
 	if account == None:
-		mlog.logerr('No account data found for ' + mail.frm + ' (' + filename + ')')
-		return False
+		mlog.logerr('No account data found for ' + mail.frm + ' (' + filename + ')' + ', switching to default account')
+		account = getMailAccount('default')
+		if account == None:
+			mlog.logerr('No default account data found (' + filename + ')')
+			return False
 
 	# First do POP-Before-SMTP, if necessary
 	if account.rPBS and (popchecktime + account.rpopcheckdelay) < time.time():
@@ -306,9 +323,11 @@ def	sendMail(mail, filename = None):
 
 	# Send mail
 	try:
+		if account.forcefrom != None:
+			mail.frm = account.forcefrom
 		mlog.log("Sending mail from: " + mail.frm + " to: " + ",".join(mail.to))
 		mlog.logdebug("Port: " + str(account.rsmtpport))
-
+		
 		smtpFunc = smtplib.SMTP
 		if account.rsmtpsecurity == 'ssl':
 			smtpFunc = smtplib.SMTP_SSL
@@ -322,7 +341,12 @@ def	sendMail(mail, filename = None):
 		server.ehlo()
 		if account.rsmtpsecurity == 'tls':
 			mlog.log("Using TLS")
-			server.starttls()
+			if account.rsmtpweaktls:				
+				context=ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+				context.set_ciphers('DEFAULT@SECLEVEL=1')
+				server.starttls(context=context)
+			else:
+				server.starttls()
 			server.ehlo()
 		if account.rsmtpuser != None:
 			try:
@@ -380,7 +404,7 @@ def handleScheduledMails():
 			try:
 				fn = msgdir +  '/' + e
 				try:
-					mail = pickle.load(open(fn,'r'))
+					mail = pickle.load(open(fn,'rb'))
 					if sendMail(mail, fn) == False:
 						ok = False
 						continue
@@ -438,6 +462,7 @@ def readConfig():
 			account.rsmtphost = smtpconfig.get(s, 'smtphost', default=account.rsmtphost)
 			account.rsmtpport = smtpconfig.getint(s, 'smtpport', default=account.rsmtpport)
 			account.rsmtpsecurity = smtpconfig.get(s, 'smtpsecurity', default=account.rsmtpsecurity)
+			account.rsmtpweaktls = smtpconfig.get(s, 'smtpweaktls', default=account.rsmtpweaktls)
 			account.rpophost = smtpconfig.get(s, 'pophost', default=account.rpophost)
 			account.rpopport = smtpconfig.getint(s, 'popport', default=account.rpopport)
 			account.rpopssl = smtpconfig.getboolean(s, 'popssl', default=account.rpopssl)
@@ -450,6 +475,7 @@ def readConfig():
 			account.localhostname = smtpconfig.get(s, 'localhostname', default=account.localhostname)
 			account.returnpath = smtpconfig.get(s, 'returnpath', default=account.returnpath)
 			account.replyto = smtpconfig.get(s, 'replyto', default=account.replyto)
+			account.forcefrom = smtpconfig.get(s, 'forcefrom', default=account.forcefrom)
 
 
 			# check config
@@ -471,7 +497,6 @@ def readConfig():
 					account.rsmtpport = 25
 				else:	# ssl
 					account.rsmtpport = 465
-
 			mailaccounts[s] = account
 
 	# make temporary directory

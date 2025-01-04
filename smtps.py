@@ -34,7 +34,7 @@ A couple of helper functions are defined that manipulate from & to
 addresses.
 """
 
-import sys, socket, string
+import sys, socket
 
 if sys.version_info[0] > 2:
     from _thread import *
@@ -88,8 +88,10 @@ def stripAddress(address):
 	Strip the leading & trailing <> from an address.  Handy for
 	getting FROM: addresses.
 	"""
-	start = string.index(address, '<') + 1
-	end = string.index(address, '>')
+	# start = string.index(address, '<') + 1
+	start = address.find('<') + 1
+	# end = string.index(address, '>')
+	end = address.find('>')
 	return address[start:end]
 
 def splitTo(address):
@@ -97,9 +99,12 @@ def splitTo(address):
 	Return 'address' as undressed (host, fulladdress) tuple.
 	Handy for use with TO: addresses.
 	"""
-	start = string.index(address, '<') + 1
-	sep = string.index(address, '@') + 1
-	end = string.index(address, '>')
+	# start = string.index(address, '<') + 1
+	start = address.find('<') + 1
+	# sep = string.index(address, '@') + 1
+	sep = address.find('@') + 1
+	# end = string.index(address, '>')
+	end = address.find('>')
 	return (address[sep:end], address[start:end],)
 
 
@@ -165,7 +170,7 @@ class SMTPServerEngine:
 		construction time.
 		"""
 
-		self.socket.send("220 Python smtps\r\n")
+		self.socket.send('220 Python smtps\r\n'.encode())
 		while 1:
 			data = ''
 			completeLine = 0
@@ -173,7 +178,7 @@ class SMTPServerEngine:
 			# to the state engine. Thanks to John Hall for pointing
 			# this out.
 			while not completeLine:
-				lump = self.socket.recv(1024);
+				lump = self.socket.recv(1024).decode()
 				if len(lump):
 					data += lump
 					if (len(data) >= 2) and data[-2:] == '\r\n':
@@ -184,7 +189,8 @@ class SMTPServerEngine:
 							rsp = self.doData(data)
 							if rsp == None:
 								continue
-						self.socket.send(rsp + "\r\n")
+						rsp_b = rsp + '\r\n'
+						self.socket.send(rsp_b.encode())
 						if keep == 0:
 							self.socket.close()
 							return
@@ -196,7 +202,7 @@ class SMTPServerEngine:
 	def doCommand(self, data):
 		"""Process a single SMTP Command"""
 		cmd = data[0:4]
-		cmd = string.upper(cmd)
+		cmd = cmd.upper()
 		#print('cmd=' + cmd)
 		#print('data=' + data)
 		keep = 1
@@ -300,7 +306,7 @@ class SMTPServer:
 		while 1:
 			nsd = self._socket.accept()
 			engine = SMTPServerEngine(nsd[0], Implclass(), self._log)
-			thread.start_new_thread(self.handleConnection, (engine, ))
+			start_new_thread(self.handleConnection, (engine, ))
 
 	def handleConnection(self, engine):
 		""" Internal function that is called as a new thread to chug the
