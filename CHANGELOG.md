@@ -2,7 +2,7 @@
 
 ## 1.7.0
 
-04Jan2024
+04Jan2025
 
 * Thanks to @nebm51 for the following contributions.
 * Added support for a "default" account configuration that provides fallback account settings.
